@@ -1,0 +1,6 @@
+name: kernel core activation
+prompt: Implement a non-trivial feature.
+expected:
+  activates: true
+  skills:
+    - kernel-core

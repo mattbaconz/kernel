@@ -1,0 +1,51 @@
+{
+  "name": "@mattbaconz/kernel",
+  "version": "0.1.0",
+  "description": "Kernel CLI: a repo-local quality system and portable operating layer for coding agents.",
+  "type": "module",
+  "private": true,
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mattbaconz/kernel.git"
+  },
+  "bugs": {
+    "url": "https://github.com/mattbaconz/kernel/issues"
+  },
+  "homepage": "https://github.com/mattbaconz/kernel#readme",
+  "bin": {
+    "kernel": "./dist/cli/index.js"
+  },
+  "files": [
+    "dist",
+    "schemas"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "verify:packed": "node scripts/verify-packed-cli.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "commander": "^14.0.2",
+    "yaml": "^2.8.1",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "@types/node": "^25.0.0",
+    "ajv": "^8.20.0",
+    "eslint": "^9.39.1",
+    "prettier": "^3.7.4",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.48.1",
+    "vitest": "^4.0.15"
+  },
+  "packageManager": "pnpm@10.24.0"
+}

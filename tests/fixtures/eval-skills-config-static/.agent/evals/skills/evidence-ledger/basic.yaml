@@ -1,0 +1,6 @@
+name: evidence ledger activation
+prompt: Record evidence after running verification commands.
+expected:
+  activates: true
+  skills:
+    - evidence-ledger

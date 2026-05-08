@@ -1,0 +1,6 @@
+{
+  "name": "existing-map-fixture",
+  "scripts": {
+    "test": "vitest run"
+  }
+}

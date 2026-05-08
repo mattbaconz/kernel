@@ -1,0 +1,6 @@
+name: orphan activation
+prompt: Use a skill that does not exist.
+expected:
+  activates: true
+  skills:
+    - orphan

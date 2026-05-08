@@ -1,0 +1,20 @@
+node_modules/
+dist/
+coverage/
+
+# Local package artifacts
+*.tgz
+
+# Local environment files
+.env
+.env.*
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Local scratch assets not part of Kernel source
+r3w78ebdt17d1.png
+working-on-my-own-version-of-a-rainbow-bloom-wallpaper-v0-r3w78ebdt17d1.webp

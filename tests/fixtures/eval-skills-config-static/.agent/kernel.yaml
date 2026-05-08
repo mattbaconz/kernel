@@ -1,0 +1,11 @@
+version: 1
+project:
+  name: Eval Skills Config Static Fixture
+adapters:
+  codex: false
+  claude: false
+  cursor: false
+  kiro: false
+  github_copilot: false
+eval:
+  default_runner: static

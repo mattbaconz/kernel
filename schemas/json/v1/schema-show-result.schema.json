@@ -1,0 +1,47 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://kernel.local/schemas/json/v1/schema-show-result.schema.json",
+  "title": "Kernel Schema Show Result v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "version", "schema", "content"],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "version": {
+      "const": "v1"
+    },
+    "schema": {
+      "$ref": "#/definitions/schemaDescriptor"
+    },
+    "content": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  },
+  "definitions": {
+    "schemaDescriptor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "name", "fileName", "path"],
+      "properties": {
+        "version": {
+          "const": "v1"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "fileName": {
+          "type": "string",
+          "pattern": "^[a-z0-9-]+\\.schema\\.json$"
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}

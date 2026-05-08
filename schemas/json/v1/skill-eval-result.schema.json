@@ -1,0 +1,212 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://kernel.local/schemas/json/v1/skill-eval-result.schema.json",
+  "title": "Kernel Skill Eval Result v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "status",
+    "runnerId",
+    "runner",
+    "fixtureCount",
+    "passCount",
+    "failCount",
+    "skipCount",
+    "warningCount",
+    "issues",
+    "results",
+    "files"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "status": {
+      "enum": ["pass", "warn", "fail"]
+    },
+    "skillFilter": {
+      "type": "string",
+      "minLength": 1
+    },
+    "runnerId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "runner": {
+      "$ref": "#/definitions/runner"
+    },
+    "fixtureCount": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "passCount": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "failCount": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "skipCount": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "warningCount": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "issues": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/skillIssue"
+      }
+    },
+    "results": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/evalCase"
+      }
+    },
+    "files": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/fileResult"
+      }
+    },
+    "summary": {
+      "$ref": "#/definitions/summaryFile"
+    }
+  },
+  "definitions": {
+    "runner": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "mode"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "mode": {
+          "enum": ["static", "live"]
+        }
+      }
+    },
+    "skillIssue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "severity", "path", "message"],
+      "properties": {
+        "code": {
+          "type": "string",
+          "minLength": 1
+        },
+        "severity": {
+          "const": "warning"
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "evalCase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "skillName", "name", "path", "reason", "runner"],
+      "properties": {
+        "status": {
+          "enum": ["pass", "skip", "fail"]
+        },
+        "skillName": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "runner": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["name", "mode", "outcome", "executed", "reason"],
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "mode": {
+              "enum": ["static", "live"]
+            },
+            "outcome": {
+              "enum": ["pass", "skip", "fail"]
+            },
+            "executed": {
+              "type": "boolean"
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1
+            },
+            "details": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        }
+      }
+    },
+    "fileResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["relativePath", "path", "action"],
+      "properties": {
+        "relativePath": {
+          "type": "string",
+          "minLength": 1
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "action": {
+          "enum": ["created", "updated", "would-create", "would-update"]
+        }
+      }
+    },
+    "summaryFile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["relativePath", "path", "action", "dryRun"],
+      "properties": {
+        "relativePath": {
+          "type": "string",
+          "minLength": 1
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "action": {
+          "enum": ["created", "updated", "would-create", "would-update"]
+        },
+        "dryRun": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

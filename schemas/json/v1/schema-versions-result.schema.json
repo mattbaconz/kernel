@@ -1,0 +1,21 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://kernel.local/schemas/json/v1/schema-versions-result.schema.json",
+  "title": "Kernel Schema Versions Result v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "versions"],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "versions": {
+      "type": "array",
+      "items": {
+        "const": "v1"
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    }
+  }
+}

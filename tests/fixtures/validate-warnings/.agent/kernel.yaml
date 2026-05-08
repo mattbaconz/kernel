@@ -1,0 +1,9 @@
+version: 1
+project:
+  name: Warning Fixture
+adapters:
+  codex: true
+  claude: false
+  cursor: false
+  kiro: false
+  github_copilot: false

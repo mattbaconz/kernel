@@ -1,0 +1,5 @@
+version: 1
+project:
+  name: Eval Skills Config Unknown Fixture
+eval:
+  default_runner: unknown

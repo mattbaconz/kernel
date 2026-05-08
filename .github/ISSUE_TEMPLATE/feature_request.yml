@@ -1,0 +1,33 @@
+name: Feature request
+description: Propose a focused Kernel capability.
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: What should Kernel help users do?
+    validations:
+      required: true
+  - type: textarea
+    id: non-goals
+    attributes:
+      label: Non-goals
+      description: What should this not include?
+  - type: textarea
+    id: users
+    attributes:
+      label: Users And Workflow
+      description: Which agents, ADEs, or repository workflows are affected?
+  - type: textarea
+    id: design
+    attributes:
+      label: Proposed Design
+      description: CLI commands, files, schemas, or adapters involved.
+  - type: textarea
+    id: verification
+    attributes:
+      label: Verification Plan
+      description: Tests and evidence expected for this work.

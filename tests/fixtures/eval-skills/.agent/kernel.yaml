@@ -1,0 +1,9 @@
+version: 1
+project:
+  name: Eval Skills Fixture
+adapters:
+  codex: false
+  claude: false
+  cursor: false
+  kiro: false
+  github_copilot: false

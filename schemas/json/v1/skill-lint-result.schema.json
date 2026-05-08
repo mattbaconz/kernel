@@ -1,0 +1,109 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://kernel.local/schemas/json/v1/skill-lint-result.schema.json",
+  "title": "Kernel Skill Lint Result v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "status",
+    "strict",
+    "skillCount",
+    "fixtureCount",
+    "warningCount",
+    "issues",
+    "fixtures"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "status": {
+      "enum": ["pass", "warn", "fail"]
+    },
+    "strict": {
+      "type": "boolean"
+    },
+    "skillCount": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "fixtureCount": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "warningCount": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "issues": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/skillIssue"
+      }
+    },
+    "fixtures": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/fixture"
+      }
+    }
+  },
+  "definitions": {
+    "skillIssue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "severity", "path", "message"],
+      "properties": {
+        "code": {
+          "type": "string",
+          "minLength": 1
+        },
+        "severity": {
+          "const": "warning"
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "fixture": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "skillName", "name", "prompt", "expectedActivates", "expectedSkills"],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "skillName": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "prompt": {
+          "type": "string",
+          "minLength": 1
+        },
+        "expectedActivates": {
+          "type": "boolean"
+        },
+        "expectedSkills": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  }
+}
