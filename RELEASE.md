@@ -44,13 +44,44 @@ Review the dry-run package contents and confirm they include only expected files
 
 Preferred release path is npm Trusted Publishing from GitHub Actions, not a long-lived npm token.
 
+Trusted publishing prerequisites:
+
+- Node.js `>=22.14.0`
+- npm CLI `>=11.5.1`
+- GitHub-hosted runner
+- workflow permission `id-token: write`
+- no long-lived `NODE_AUTH_TOKEN` for the publish step
+
+Trusted publisher values for Kernel:
+
+- npm package: `@mattbaconz/kernel`
+- GitHub organization or user: `mattbaconz`
+- GitHub repository: `kernel`
+- workflow file: `npm-release.yml`
+- GitHub environment: `npm-release`
+
+Check whether the package already exists on npm:
+
+```bash
+npm view @mattbaconz/kernel name version --json
+```
+
+If npm returns `E404`, the package does not exist yet. The npm trust CLI can only configure trusted publishing for an existing package, so an unpublished package requires a separate one-time bootstrap release decision before normal trusted-publishing releases can begin. Do not treat that bootstrap as part of this checklist.
+
 Before enabling publication:
 
 1. Configure npm trusted publishing for `@mattbaconz/kernel`.
 2. Set the trusted publisher to the public GitHub repository `mattbaconz/kernel`.
 3. Set the workflow file to `.github/workflows/npm-release.yml`.
-4. Confirm the workflow has `id-token: write`.
-5. Confirm npm package ownership and 2FA settings for the `mattbaconz` account.
+4. Set the GitHub environment to `npm-release`.
+5. Confirm the workflow has `id-token: write`.
+6. Confirm npm package ownership and 2FA settings for the `mattbaconz` account.
+
+After the package exists, the trusted publisher can be configured with:
+
+```bash
+npm trust github @mattbaconz/kernel --repo mattbaconz/kernel --file npm-release.yml --env npm-release
+```
 
 Trusted publishing uses OIDC. With trusted publishing, npm generates provenance attestations automatically. If trusted publishing is not available, do not fall back to a broad token without a separate release security review.
 
@@ -68,8 +99,23 @@ Publication behavior:
 
 - requires manual `workflow_dispatch`
 - requires `enable_publish: true`
+- requires `publish_confirmation` to equal the exact package/version, such as `@mattbaconz/kernel@0.1.0`
 - refuses to publish while `package.json` has `"private": true`
-- uses `npm publish --access public` only after the gates above pass
+- uses `npm publish --access public --provenance` only after the gates above pass
+
+## One-Time Bootstrap
+
+The first npm publication is different because `@mattbaconz/kernel` does not exist on the registry yet.
+
+If the package still returns `E404`, handle the one-time bootstrap in a separate explicit task:
+
+1. Verify the public repository is the source checkout.
+2. Verify the package metadata points to `https://github.com/mattbaconz/kernel.git`.
+3. Remove `"private": true` only in that task.
+4. Run the full verification list and inspect `npm pack --dry-run --json`.
+5. Publish once only after the user explicitly approves publication.
+6. Configure trusted publishing immediately after the package exists.
+7. Use the normal manual workflow for future releases.
 
 ## Tag And Release
 
