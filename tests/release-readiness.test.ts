@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import type { Command } from 'commander';
+import { parse } from 'yaml';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 
 import { createKernelProgram } from '../src/cli/index.js';
@@ -159,6 +160,7 @@ describe('Kernel release-readiness workflow', () => {
       private?: boolean;
       bin?: Record<string, string>;
       files?: string[];
+      publishConfig?: Record<string, string>;
       scripts?: Record<string, string>;
     };
 
@@ -169,6 +171,9 @@ describe('Kernel release-readiness workflow', () => {
       kernel: './dist/cli/index.js'
     });
     expect(packageJson.files).toEqual(expect.arrayContaining(['dist', 'schemas']));
+    expect(packageJson.publishConfig).toEqual({
+      access: 'public'
+    });
     expect(packageJson.scripts).toEqual(
       expect.objectContaining({
         build: 'tsc -p tsconfig.build.json',
@@ -182,6 +187,46 @@ describe('Kernel release-readiness workflow', () => {
       'verifyPackedCli'
     );
     await expect(readFile(join(repoRoot, 'LICENSE'), 'utf8')).resolves.toContain('Copyright 2026 mattbaconz');
+  });
+
+  test('documents npm release readiness without enabling publication', async () => {
+    const releaseChecklist = await readFile(join(repoRoot, 'RELEASE.md'), 'utf8');
+
+    expect(releaseChecklist).toContain('@mattbaconz/kernel');
+    expect(releaseChecklist).toContain('Do not publish while `package.json` has `"private": true`.');
+    expect(releaseChecklist).toContain('Trusted publishing');
+    expect(releaseChecklist).toContain('provenance');
+    expect(releaseChecklist).toContain('npm publish');
+    expect(releaseChecklist).toContain('rollback');
+  });
+
+  test('keeps npm release workflow manual and publish-gated', async () => {
+    const workflowText = await readFile(join(repoRoot, '.github', 'workflows', 'npm-release.yml'), 'utf8');
+    const workflow = parse(workflowText) as {
+      name?: string;
+      on?: Record<string, unknown>;
+      permissions?: Record<string, string>;
+      jobs?: Record<string, { steps?: Array<{ if?: string; run?: string }> }>;
+    };
+
+    expect(workflow.name).toBe('NPM Release');
+    expect(Object.keys(workflow.on ?? {})).toEqual(['workflow_dispatch']);
+    expect(workflow.permissions).toEqual({
+      contents: 'read',
+      'id-token': 'write'
+    });
+    expect(workflowText).toContain('enable_publish');
+    expect(workflowText).toContain('pnpm install --frozen-lockfile');
+    expect(workflowText).toContain('pnpm test');
+    expect(workflowText).toContain('pnpm typecheck');
+    expect(workflowText).toContain('pnpm lint');
+    expect(workflowText).toContain('pnpm build');
+    expect(workflowText).toContain('pnpm verify:packed');
+    expect(workflowText).toContain('npm pack --dry-run --json');
+    expect(workflowText).toContain("if: ${{ inputs.enable_publish != true }}");
+    expect(workflowText).toContain("if: ${{ inputs.enable_publish == true }}");
+    expect(workflowText).toContain('package.json private=true');
+    expect(workflowText).toContain('npm publish --access public');
   });
 });
 
