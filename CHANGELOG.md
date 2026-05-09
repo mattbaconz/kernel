@@ -20,6 +20,7 @@ This project follows semantic versioning once public releases begin.
 - Schema discovery commands.
 - Release-readiness integration tests and packed CLI verification.
 - GitHub CI workflow.
+- npm release-readiness checklist and gated manual release workflow skeleton.
 
 ### Notes
 

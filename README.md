@@ -121,6 +121,10 @@ pnpm verify:packed
 
 CI runs the same core checks on `main` and pull requests.
 
+## Release Readiness
+
+Kernel is not published to npm yet. Release gates, trusted-publishing setup notes, provenance expectations, and rollback checks are documented in `RELEASE.md`.
+
 ## JSON Outputs And Schemas
 
 Machine-readable command outputs include `schemaVersion: 1`.

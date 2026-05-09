@@ -1,0 +1,99 @@
+name: NPM Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      enable_publish:
+        description: Set to true only after RELEASE.md is complete and package privacy has been intentionally changed.
+        required: true
+        default: false
+        type: boolean
+      expected_version:
+        description: Optional package.json version expected for this release.
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  release:
+    name: Verify npm release artifact
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 10.24.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Test
+        run: pnpm test
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Build
+        run: pnpm build
+
+      - name: Verify packed CLI
+        run: pnpm verify:packed
+
+      - name: Verify release metadata
+        env:
+          EXPECTED_VERSION: ${{ inputs.expected_version }}
+        run: |
+          node <<'NODE'
+          const packageJson = require('./package.json');
+          if (packageJson.name !== '@mattbaconz/kernel') {
+            throw new Error(`Unexpected package name: ${packageJson.name}`);
+          }
+          if (packageJson.publishConfig?.access !== 'public') {
+            throw new Error('Expected publishConfig.access to be public.');
+          }
+          if (process.env.EXPECTED_VERSION && packageJson.version !== process.env.EXPECTED_VERSION) {
+            throw new Error(`Expected version ${process.env.EXPECTED_VERSION}, got ${packageJson.version}.`);
+          }
+          console.log(`package: ${packageJson.name}@${packageJson.version}`);
+          console.log(`private: ${String(packageJson.private)}`);
+          NODE
+
+      - name: Pack dry run
+        run: npm pack --dry-run --json
+
+      - name: Refuse publish by default
+        if: ${{ inputs.enable_publish != true }}
+        run: |
+          echo "Publication disabled. Set enable_publish=true only after RELEASE.md is complete."
+          echo "No npm publish command was run."
+
+      - name: Verify publish gate
+        if: ${{ inputs.enable_publish == true }}
+        run: |
+          node <<'NODE'
+          const packageJson = require('./package.json');
+          if (packageJson.private) {
+            throw new Error('Refusing to publish while package.json private=true. Remove private:true in a separate release task.');
+          }
+          NODE
+
+      - name: Publish to npm
+        if: ${{ inputs.enable_publish == true }}
+        run: npm publish --access public
