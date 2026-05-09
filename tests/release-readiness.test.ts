@@ -196,6 +196,14 @@ describe('Kernel release-readiness workflow', () => {
     expect(releaseChecklist).toContain('Do not publish while `package.json` has `"private": true`.');
     expect(releaseChecklist).toContain('Trusted publishing');
     expect(releaseChecklist).toContain('provenance');
+    expect(releaseChecklist).toContain('Node.js `>=22.14.0`');
+    expect(releaseChecklist).toContain('npm CLI `>=11.5.1`');
+    expect(releaseChecklist).toContain('npm view @mattbaconz/kernel name version --json');
+    expect(releaseChecklist).toContain(
+      'npm trust github @mattbaconz/kernel --repo mattbaconz/kernel --file npm-release.yml --env npm-release'
+    );
+    expect(releaseChecklist).toContain('If npm returns `E404`');
+    expect(releaseChecklist).toContain('one-time bootstrap');
     expect(releaseChecklist).toContain('npm publish');
     expect(releaseChecklist).toContain('rollback');
   });
@@ -206,7 +214,7 @@ describe('Kernel release-readiness workflow', () => {
       name?: string;
       on?: Record<string, unknown>;
       permissions?: Record<string, string>;
-      jobs?: Record<string, { steps?: Array<{ if?: string; run?: string }> }>;
+      jobs?: Record<string, { environment?: string; steps?: Array<{ if?: string; run?: string }> }>;
     };
 
     expect(workflow.name).toBe('NPM Release');
@@ -215,7 +223,13 @@ describe('Kernel release-readiness workflow', () => {
       contents: 'read',
       'id-token': 'write'
     });
+    expect(workflow.jobs?.release?.environment).toBe('npm-release');
     expect(workflowText).toContain('enable_publish');
+    expect(workflowText).toContain('publish_confirmation');
+    expect(workflowText).toContain('node-version: 24');
+    expect(workflowText).toContain('package-manager-cache: false');
+    expect(workflowText).not.toContain('cache: pnpm');
+    expect(workflowText).toContain('npm install -g npm@11.5.1');
     expect(workflowText).toContain('pnpm install --frozen-lockfile');
     expect(workflowText).toContain('pnpm test');
     expect(workflowText).toContain('pnpm typecheck');
@@ -226,6 +240,8 @@ describe('Kernel release-readiness workflow', () => {
     expect(workflowText).toContain("if: ${{ inputs.enable_publish != true }}");
     expect(workflowText).toContain("if: ${{ inputs.enable_publish == true }}");
     expect(workflowText).toContain('package.json private=true');
+    expect(workflowText).toContain('PUBLISH_CONFIRMATION');
+    expect(workflowText).toContain("Expected publish_confirmation='@mattbaconz/kernel@");
     expect(workflowText).toContain('npm publish --access public');
   });
 });

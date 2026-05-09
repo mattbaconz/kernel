@@ -8,6 +8,10 @@ on:
         required: true
         default: false
         type: boolean
+      publish_confirmation:
+        description: Type the exact package/version, for example @mattbaconz/kernel@0.1.0, before publishing.
+        required: false
+        type: string
       expected_version:
         description: Optional package.json version expected for this release.
         required: false
@@ -21,6 +25,7 @@ jobs:
   release:
     name: Verify npm release artifact
     runs-on: ubuntu-latest
+    environment: npm-release
 
     steps:
       - name: Checkout
@@ -34,9 +39,14 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v6
         with:
-          node-version: 22
-          cache: pnpm
+          node-version: 24
+          package-manager-cache: false
           registry-url: https://registry.npmjs.org
+
+      - name: Setup npm for trusted publishing
+        run: |
+          npm install -g npm@11.5.1
+          npm --version
 
       - name: Install
         run: pnpm install --frozen-lockfile
@@ -86,14 +96,20 @@ jobs:
 
       - name: Verify publish gate
         if: ${{ inputs.enable_publish == true }}
+        env:
+          PUBLISH_CONFIRMATION: ${{ inputs.publish_confirmation }}
         run: |
           node <<'NODE'
           const packageJson = require('./package.json');
+          const expectedConfirmation = `${packageJson.name}@${packageJson.version}`;
           if (packageJson.private) {
             throw new Error('Refusing to publish while package.json private=true. Remove private:true in a separate release task.');
+          }
+          if (process.env.PUBLISH_CONFIRMATION !== expectedConfirmation) {
+            throw new Error(`Expected publish_confirmation='@mattbaconz/kernel@${packageJson.version}' before publishing.`);
           }
           NODE
 
       - name: Publish to npm
         if: ${{ inputs.enable_publish == true }}
-        run: npm publish --access public
+        run: npm publish --access public --provenance
