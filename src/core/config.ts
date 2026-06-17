@@ -50,6 +50,9 @@ const defaultConfigValues = {
   },
   maps: {
     include_codeowners: true
+  },
+  context: {
+    github: {}
   }
 } as const;
 
@@ -116,7 +119,17 @@ export const kernelConfigSchema = z
       .object({
         include_codeowners: z.boolean().default(defaultConfigValues.maps.include_codeowners)
       })
-      .default(defaultConfigValues.maps)
+      .default(defaultConfigValues.maps),
+    context: z
+      .object({
+        github: z
+          .object({
+            owner: z.string().min(1).optional(),
+            repo: z.string().min(1).optional()
+          })
+          .default(defaultConfigValues.context.github)
+      })
+      .default(defaultConfigValues.context)
   })
   .strict();
 

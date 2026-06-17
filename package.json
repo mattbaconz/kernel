@@ -1,6 +1,6 @@
 {
   "name": "@mattbaconz/kernel",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Kernel CLI: a repo-local quality system and portable operating layer for coding agents.",
   "type": "module",
   "private": true,

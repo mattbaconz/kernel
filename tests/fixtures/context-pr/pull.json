@@ -1,0 +1,9 @@
+{
+  "number": 42,
+  "title": "Add GitHub context providers",
+  "body": "Implements PR and issue context for agents.",
+  "state": "open",
+  "html_url": "https://github.com/mattbaconz/kernel/pull/42",
+  "labels": [{ "name": "enhancement" }],
+  "head": { "sha": "abc123def456" }
+}

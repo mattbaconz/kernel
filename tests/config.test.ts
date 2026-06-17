@@ -66,6 +66,9 @@ describe('loadKernelConfig', () => {
       },
       maps: {
         include_codeowners: true
+      },
+      context: {
+        github: {}
       }
     });
   });
@@ -149,6 +152,21 @@ describe('loadKernelConfig', () => {
     );
 
     await expect(loadKernelConfig(rootDir)).rejects.toBeInstanceOf(KernelConfigError);
+  });
+
+  test('loads optional context.github config', async () => {
+    const rootDir = await createTempRepo();
+    await mkdir(join(rootDir, '.agent'), { recursive: true });
+    await writeFile(
+      join(rootDir, '.agent', 'kernel.yaml'),
+      ['version: 1', 'context:', '  github:', '    owner: mattbaconz', '    repo: kernel', ''].join('\n'),
+      'utf8'
+    );
+
+    const config = await loadKernelConfig(rootDir);
+
+    expect(config.context.github.owner).toBe('mattbaconz');
+    expect(config.context.github.repo).toBe('kernel');
   });
 
   test('rejects invalid config', async () => {
