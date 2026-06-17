@@ -1,4 +1,5 @@
 import { KernelConfigError } from '../core/config.js';
+import { KernelContextError } from '../core/context/types.js';
 import { KernelEvalRunnerError } from '../core/eval.js';
 import { KernelFileExistsError } from '../core/fs.js';
 import { formatKernelJsonResult } from '../core/json-output.js';
@@ -26,6 +27,17 @@ export function createCliJsonErrorEnvelope(command: string, error: unknown): Cli
         command,
         message: error.message,
         runnerId: error.runnerId
+      }
+    };
+  }
+
+  if (error instanceof KernelContextError) {
+    return {
+      status: 'error',
+      error: {
+        code: error.code,
+        command,
+        message: error.message
       }
     };
   }

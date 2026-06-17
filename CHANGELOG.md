@@ -4,6 +4,20 @@ All notable changes to Kernel will be documented in this file.
 
 This project follows semantic versioning once public releases begin.
 
+## 0.2.0
+
+### Added
+
+- Repo intelligence (0.4): v2 map schemas, CODEOWNERS, monorepo workspaces, Makefile/justfile command detection, config-aware risk maps.
+- Policy engine (0.5): `policy-gate.yaml`, `kernel policy check`, verification escalation, CI policy validation.
+- GitHub context (0.6): `kernel context pr` and `kernel context issue` read-only providers with optional `.agent/context` cache.
+- Optional `context.github` config block for owner/repo resolution.
+- Public sync workflow now verifies `kernel policy check --ci` on exported tree.
+
+### Notes
+
+- Private `kernel-skills` remains `"private": true`; npm publication uses the public `mattbaconz/kernel` repository.
+
 ## 0.1.0 - Unreleased
 
 ### Added
@@ -32,9 +46,6 @@ This project follows semantic versioning once public releases begin.
 - Adapter compile deduplication for shared output paths across ADEs.
 - Expanded eval fixtures for context-router, risk-map, diff-surgeon, and repo-cartographer.
 - Updated CLI Command Spec for implemented commands and flags.
-- Repo intelligence (0.4): v2 map schemas, CODEOWNERS, monorepo workspaces, Makefile/justfile command detection, config-aware risk maps.
-- Policy engine (0.5): `policy-gate.yaml`, `kernel policy check`, verification escalation, CI policy validation.
-- `kernel init` seeds `.agent/policies/policy-gate.yaml`.
 
 ### Notes
 

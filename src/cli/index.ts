@@ -36,6 +36,12 @@ import {
   formatPolicyCheckJsonResult,
   formatPolicyCheckResult
 } from '../core/policy/check.js';
+import {
+  fetchContext,
+  formatContextJsonResult,
+  formatContextResult
+} from '../core/context/fetch.js';
+import { KernelContextError } from '../core/context/types.js';
 import { createCliJsonErrorEnvelope, formatCliJsonErrorEnvelope } from './json-errors.js';
 
 export function createKernelProgram(): Command {
@@ -44,7 +50,7 @@ export function createKernelProgram(): Command {
   program
     .name('kernel')
     .description('Repo-local quality system and portable operating layer for coding agents.')
-    .version('0.1.0');
+    .version('0.2.0');
 
   program
     .command('init')
@@ -168,6 +174,85 @@ export function createKernelProgram(): Command {
         }
       } catch (error) {
         if (writeJsonErrorEnvelope('policy check', Boolean(options.json), error)) {
+          return;
+        }
+
+        throw error;
+      }
+    });
+
+  const context = program.command('context').description('Fetch read-only external context for agents.');
+  context
+    .command('pr')
+    .description('Fetch GitHub pull request context.')
+    .option('--number <number>', 'pull request number', (value) => Number.parseInt(value, 10))
+    .option('--current', 'infer pull request from current branch or gh pr view')
+    .option('--dry-run', 'fetch context without writing .agent/context cache')
+    .option('--json', 'print machine-readable JSON')
+    .action(async (options: { number?: number; current?: boolean; dryRun?: boolean; json?: boolean }) => {
+      try {
+        const result = await fetchContext({
+          kind: 'pr',
+          number: options.number,
+          current: Boolean(options.current),
+          dryRun: Boolean(options.dryRun)
+        });
+
+        if (options.json) {
+          process.stdout.write(formatContextJsonResult(result));
+        } else {
+          process.stdout.write(`${formatContextResult(result)}\n`);
+        }
+
+        if (result.status === 'error') {
+          process.exitCode = 1;
+        }
+      } catch (error) {
+        if (error instanceof KernelContextError && !options.json) {
+          console.error(error.message);
+          process.exitCode = 1;
+          return;
+        }
+
+        if (writeJsonErrorEnvelope('context pr', Boolean(options.json), error)) {
+          return;
+        }
+
+        throw error;
+      }
+    });
+
+  context
+    .command('issue')
+    .description('Fetch GitHub issue context.')
+    .option('--number <number>', 'issue number', (value) => Number.parseInt(value, 10))
+    .option('--dry-run', 'fetch context without writing .agent/context cache')
+    .option('--json', 'print machine-readable JSON')
+    .action(async (options: { number?: number; dryRun?: boolean; json?: boolean }) => {
+      try {
+        const result = await fetchContext({
+          kind: 'issue',
+          number: options.number,
+          dryRun: Boolean(options.dryRun)
+        });
+
+        if (options.json) {
+          process.stdout.write(formatContextJsonResult(result));
+        } else {
+          process.stdout.write(`${formatContextResult(result)}\n`);
+        }
+
+        if (result.status === 'error') {
+          process.exitCode = 1;
+        }
+      } catch (error) {
+        if (error instanceof KernelContextError && !options.json) {
+          console.error(error.message);
+          process.exitCode = 1;
+          return;
+        }
+
+        if (writeJsonErrorEnvelope('context issue', Boolean(options.json), error)) {
           return;
         }
 

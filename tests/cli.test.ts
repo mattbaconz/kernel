@@ -743,4 +743,19 @@ describe('Kernel CLI JSON error envelopes', () => {
     expect(parsed.status).toBe('warn');
     expect(parsed.violations.some((violation) => violation.code === 'policy_path_review')).toBe(true);
   });
+
+  test('supports kernel context pr --help', () => {
+    const output = helpFor(['context', 'pr', '--help']);
+
+    expect(output).toContain('Usage: kernel context pr');
+    expect(output).toContain('--number');
+    expect(output).toContain('--current');
+  });
+
+  test('supports kernel context issue --help', () => {
+    const output = helpFor(['context', 'issue', '--help']);
+
+    expect(output).toContain('Usage: kernel context issue');
+    expect(output).toContain('--number');
+  });
 });

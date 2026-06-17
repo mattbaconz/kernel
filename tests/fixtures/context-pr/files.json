@@ -1,0 +1,14 @@
+[
+  {
+    "filename": "src/core/context/pr.ts",
+    "additions": 120,
+    "deletions": 0,
+    "status": "added"
+  },
+  {
+    "filename": "src/cli/index.ts",
+    "additions": 45,
+    "deletions": 2,
+    "status": "modified"
+  }
+]

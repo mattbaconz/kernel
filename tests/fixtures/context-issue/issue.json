@@ -1,0 +1,9 @@
+{
+  "number": 15,
+  "title": "Track release checklist",
+  "body": "Follow up on #12 and coordinate with #18.",
+  "state": "open",
+  "html_url": "https://github.com/mattbaconz/kernel/issues/15",
+  "labels": [{ "name": "release" }],
+  "assignees": [{ "login": "mattbaconz" }]
+}
