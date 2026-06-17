@@ -1,3 +1,9 @@
 {
-  "version": 1
+  "version": 2,
+  "packageManager": null,
+  "scripts": [],
+  "sources": [],
+  "kernelCommands": [],
+  "packageScripts": [],
+  "taskRunnerTasks": []
 }

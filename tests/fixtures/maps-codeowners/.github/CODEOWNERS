@@ -1,0 +1,2 @@
+# Security-sensitive areas
+/src/auth/ @security-team @platform-leads

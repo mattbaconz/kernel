@@ -105,6 +105,11 @@ kernel compile claude
 kernel compile cursor
 kernel compile kiro
 kernel compile github-copilot
+kernel compile gemini
+kernel compile zed
+kernel compile opencode
+kernel compile windsurf
+kernel compile junie
 ```
 
 ## Development Checks

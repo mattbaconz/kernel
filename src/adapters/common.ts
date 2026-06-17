@@ -28,6 +28,35 @@ export function kernelProcedure(): string[] {
   ];
 }
 
+export function renderKernelBootstrapAgents(projectName: string, workflowLabel: string): string {
+  return [
+    '# AGENTS.md',
+    '',
+    'This repository uses **Kernel** for repo-local task contracts, verification evidence, and agent handoffs.',
+    '',
+    `Project: ${projectName}`,
+    '',
+    '## Prime directive',
+    '',
+    primeDirective(),
+    '',
+    '## Canonical source',
+    '',
+    ...canonicalSourceList(),
+    '',
+    `## ${workflowLabel}`,
+    '',
+    '1. Read `AGENTS.md` and `.agent/kernel.yaml` before non-trivial implementation.',
+    '2. Create or update `.agent/state/current-task.md` before implementation.',
+    '3. Prefer minimal, testable changes.',
+    '4. Record verification evidence before claiming completion.',
+    '5. Create a handoff packet when work is incomplete or likely to move to another ADE.',
+    '',
+    ...manualSection(),
+    ''
+  ].join('\n');
+}
+
 export function skillFrontmatter(name: string, description: string): string[] {
   return ['---', `name: ${name}`, `description: ${description}`, '---'];
 }

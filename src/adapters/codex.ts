@@ -1,22 +1,38 @@
 import type { KernelAdapter } from './types.js';
+import { canonicalSourceList, manualSection, primeDirective } from './common.js';
 
 export const codexAdapter: KernelAdapter = {
   name: 'codex',
-  render({ config }) {
-    return [
+  render({ config, canonicalSkills }) {
+    const projectName = config.project.name;
+    const outputs = [
       {
         path: 'AGENTS.md',
-        content: renderCodexAgents(config.project.name),
-        generated: true,
-        preserveManualSections: true
-      },
-      {
-        path: '.agents/skills/kernel-core/SKILL.md',
-        content: renderKernelCoreSkill(config.project.name),
-        generated: true,
+        content: renderCodexAgents(projectName),
+        generated: true as const,
         preserveManualSections: true
       }
     ];
+
+    for (const skill of canonicalSkills) {
+      outputs.push({
+        path: `.agents/skills/${skill.name}/SKILL.md`,
+        content: skill.content,
+        generated: true as const,
+        preserveManualSections: true
+      });
+    }
+
+    if (canonicalSkills.length === 0) {
+      outputs.push({
+        path: '.agents/skills/kernel-core/SKILL.md',
+        content: renderFallbackKernelCoreSkill(projectName),
+        generated: true as const,
+        preserveManualSections: true
+      });
+    }
+
+    return outputs;
   }
 };
 
@@ -30,16 +46,11 @@ function renderCodexAgents(projectName: string): string {
     '',
     '## Prime directive',
     '',
-    'No contract, no implementation. No evidence, no completion. No handoff, no continuity.',
+    primeDirective(),
     '',
     '## Canonical source',
     '',
-    '- Kernel config: `.agent/kernel.yaml`',
-    '- Current task: `.agent/state/current-task.md`',
-    '- Task contracts: `.agent/contracts/`',
-    '- Evidence ledgers: `.agent/evidence/`',
-    '- Handoff packets: `.agent/handoffs/`',
-    '- Repository maps: `.agent/maps/`',
+    ...canonicalSourceList(),
     '',
     '## Codex workflow',
     '',
@@ -49,14 +60,12 @@ function renderCodexAgents(projectName: string): string {
     '4. Record verification evidence before claiming completion.',
     '5. Create a handoff packet when work is incomplete or likely to move to another ADE.',
     '',
-    '<!-- kernel:manual:start -->',
-    '',
-    '<!-- kernel:manual:end -->',
+    ...manualSection(),
     ''
   ].join('\n');
 }
 
-function renderKernelCoreSkill(projectName: string): string {
+function renderFallbackKernelCoreSkill(projectName: string): string {
   return [
     '---',
     'name: kernel-core',
@@ -82,9 +91,7 @@ function renderKernelCoreSkill(projectName: string): string {
     '',
     'Durable Kernel artifacts under `.agent/`.',
     '',
-    '<!-- kernel:manual:start -->',
-    '',
-    '<!-- kernel:manual:end -->',
+    ...manualSection(),
     ''
   ].join('\n');
 }

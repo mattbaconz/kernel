@@ -716,4 +716,31 @@ describe('Kernel CLI JSON error envelopes', () => {
       }
     });
   });
+
+  test('supports kernel policy check --help', () => {
+    const output = helpFor(['policy', 'check', '--help']);
+
+    expect(output).toContain('Usage: kernel policy check');
+    expect(output).toContain('--command');
+    expect(output).toContain('--ci');
+  });
+
+  test('exits with code 1 when a blocked command is classified', async () => {
+    const rootDir = await copyFixture('policy-basic');
+
+    const result = await runCli(['policy', 'check', '--command', 'npm publish'], rootDir);
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stdout).toContain('policy_command_blocked');
+  });
+
+  test('prints JSON policy check results', async () => {
+    const rootDir = await copyFixture('policy-review-path');
+
+    const result = await runCli(['policy', 'check', '--path', 'src/auth/login.ts', '--json'], rootDir);
+    const parsed = JSON.parse(result.stdout) as { status: string; violations: Array<{ code: string }> };
+
+    expect(parsed.status).toBe('warn');
+    expect(parsed.violations.some((violation) => violation.code === 'policy_path_review')).toBe(true);
+  });
 });

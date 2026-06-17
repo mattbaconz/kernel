@@ -48,3 +48,6 @@ jobs:
 
       - name: Verify Packed CLI
         run: pnpm verify:packed
+
+      - name: Kernel policy check
+        run: pnpm build && node dist/cli/index.js policy check --ci

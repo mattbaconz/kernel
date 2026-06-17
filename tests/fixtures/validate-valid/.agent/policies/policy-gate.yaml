@@ -1,0 +1,11 @@
+version: 1
+commands: []
+paths: []
+escalation:
+  by_task_type:
+    feature: L0
+    bugfix: L0
+  by_path: []
+ci:
+  provider: github-actions
+  required_checks: []

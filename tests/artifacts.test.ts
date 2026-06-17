@@ -4,12 +4,14 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, test } from 'vitest';
 
 import {
+  addEvidenceCommand,
   createEvidenceLedger,
   createHandoffPacket,
   createTaskContract,
   renderEvidenceLedger,
   renderHandoffPacket,
-  renderTaskContract
+  renderTaskContract,
+  showTaskContract
 } from '../src/core/artifacts.js';
 import { KernelFileExistsError } from '../src/core/fs.js';
 
@@ -162,5 +164,63 @@ describe('artifact writers', () => {
     expect(handoffResult.files[0]?.action).toBe('would-create');
     await expect(readText(join(rootDir, '.agent', 'evidence', 'explicit-task.md'))).rejects.toThrow();
     await expect(readText(join(rootDir, '.agent', 'handoffs', 'explicit-task.md'))).rejects.toThrow();
+  });
+
+  test('shows the current task contract', async () => {
+    const rootDir = await copyFixture('artifacts-current-task');
+
+    const view = await showTaskContract(rootDir);
+
+    expect(view.id).toBe('current-task');
+    expect(view.type).toBe('bugfix');
+    expect(view.goal).toBe('Keep a known current task for artifact tests.');
+    expect(view.relativePath).toBe('.agent/state/current-task.md');
+    expect(view.content).toContain('# Task Contract: current-task');
+  });
+
+  test('shows a task contract by id', async () => {
+    const rootDir = await copyFixture('artifacts-empty');
+
+    await createTaskContract(rootDir, {
+      id: 'explicit-task',
+      type: 'feature',
+      goal: 'Show task by id'
+    });
+
+    const view = await showTaskContract(rootDir, { id: 'explicit-task' });
+
+    expect(view.relativePath).toBe('.agent/contracts/explicit-task.md');
+    expect(view.id).toBe('explicit-task');
+    expect(view.goal).toBe('Show task by id');
+  });
+
+  test('appends a verification command to an evidence ledger', async () => {
+    const rootDir = await copyFixture('artifacts-current-task');
+
+    await createEvidenceLedger(rootDir, { task: 'current', claim: 'Verified artifact commands' });
+    const result = await addEvidenceCommand(rootDir, {
+      task: 'current',
+      command: 'pnpm test',
+      exitCode: '0',
+      result: 'pass',
+      notes: 'artifacts suite'
+    });
+
+    expect(result.taskId).toBe('current-task');
+    expect(result.files[0]?.relativePath).toBe('.agent/evidence/current-task.md');
+    await expect(readText(join(rootDir, '.agent', 'evidence', 'current-task.md'))).resolves.toContain(
+      '| pnpm test | 0 | pass | artifacts suite |'
+    );
+  });
+
+  test('refuses to append a command when the evidence ledger is missing', async () => {
+    const rootDir = await copyFixture('artifacts-current-task');
+
+    await expect(
+      addEvidenceCommand(rootDir, {
+        task: 'current',
+        command: 'pnpm test'
+      })
+    ).rejects.toThrow('Evidence ledger not found');
   });
 });

@@ -1,0 +1,18 @@
+version: 1
+commands:
+  - class: block
+    match: npm publish
+    reason: package publishing
+paths:
+  - pattern: src/core/**
+    class: review
+    reason: core runtime
+    min_verification: L3
+escalation:
+  by_task_type:
+    migration: L5
+  by_path: []
+ci:
+  provider: github-actions
+  required_checks:
+    - pnpm test

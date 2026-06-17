@@ -3,31 +3,47 @@ import { kernelProcedure, manualSection, primeDirective, skillFrontmatter } from
 
 export const githubCopilotAdapter: KernelAdapter = {
   name: 'github-copilot',
-  render({ config }) {
+  render({ config, canonicalSkills }) {
     const projectName = config.project.name;
-    return [
+    const outputs = [
       {
         path: '.github/copilot-instructions.md',
         content: renderCopilotInstructions(projectName),
-        generated: true,
+        generated: true as const,
         preserveManualSections: true
       },
       {
         path: '.github/instructions/testing.instructions.md',
         content: renderTestingInstructions(projectName),
-        generated: true,
+        generated: true as const,
         preserveManualSections: true
       },
       {
         path: '.github/instructions/review.instructions.md',
         content: renderReviewInstructions(projectName),
-        generated: true,
+        generated: true as const,
         preserveManualSections: true
-      },
+      }
+    ];
+
+    if (canonicalSkills.length > 0) {
+      for (const skill of canonicalSkills) {
+        outputs.push({
+          path: `.github/skills/${skill.name}/SKILL.md`,
+          content: skill.content,
+          generated: true as const,
+          preserveManualSections: true
+        });
+      }
+      return outputs;
+    }
+
+    return [
+      ...outputs,
       {
         path: '.github/skills/kernel-core/SKILL.md',
         content: renderCopilotSkill(projectName),
-        generated: true,
+        generated: true as const,
         preserveManualSections: true
       }
     ];

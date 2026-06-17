@@ -22,6 +22,19 @@ This project follows semantic versioning once public releases begin.
 - GitHub CI workflow.
 - npm release-readiness checklist and gated manual release workflow skeleton.
 - Hardened npm trusted-publishing release workflow constraints and bootstrap documentation.
+- Balanced-track product improvements: lint-ready skill doc fixes, 35-skill vault generation, MVP eval fixtures.
+- `kernel task show` and `kernel evidence add-command` CLI commands.
+- Canonical-skill-driven adapter compiler for priority ADEs.
+- Gemini CLI adapter (`kernel compile gemini`) generating `GEMINI.md` and `.gemini/settings.json`.
+- Zed, OpenCode, Windsurf, and Junie tier-2 adapters.
+- `kernel init --adapters` for selective adapter enablement in generated config.
+- Selective `kernel map --commands/--tests/--risk` flags.
+- Adapter compile deduplication for shared output paths across ADEs.
+- Expanded eval fixtures for context-router, risk-map, diff-surgeon, and repo-cartographer.
+- Updated CLI Command Spec for implemented commands and flags.
+- Repo intelligence (0.4): v2 map schemas, CODEOWNERS, monorepo workspaces, Makefile/justfile command detection, config-aware risk maps.
+- Policy engine (0.5): `policy-gate.yaml`, `kernel policy check`, verification escalation, CI policy validation.
+- `kernel init` seeds `.agent/policies/policy-gate.yaml`.
 
 ### Notes
 

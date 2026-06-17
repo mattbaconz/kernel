@@ -1,0 +1,15 @@
+{
+  "version": 2,
+  "packageManager": "npm",
+  "scripts": [
+    {
+      "name": "release",
+      "command": "npm release",
+      "script": "npm publish"
+    }
+  ],
+  "sources": [],
+  "kernelCommands": [],
+  "packageScripts": [],
+  "taskRunnerTasks": []
+}

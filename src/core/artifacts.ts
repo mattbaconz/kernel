@@ -30,6 +30,28 @@ export interface CreateHandoffPacketOptions {
   force?: boolean;
 }
 
+export interface AddEvidenceCommandOptions {
+  task: string;
+  command: string;
+  exitCode?: string;
+  result?: string;
+  notes?: string;
+  dryRun?: boolean;
+  force?: boolean;
+}
+
+export interface ShowTaskContractOptions {
+  id?: string;
+}
+
+export interface TaskContractView {
+  id: string;
+  type: string;
+  goal: string;
+  relativePath: string;
+  content: string;
+}
+
 export interface ArtifactFileResult {
   relativePath: string;
   path: string;
@@ -113,6 +135,63 @@ export async function createHandoffPacket(
   return {
     taskId,
     files: [file]
+  };
+}
+
+export async function addEvidenceCommand(
+  rootDir: string = process.cwd(),
+  options: AddEvidenceCommandOptions
+): Promise<ArtifactWriteResult> {
+  const taskId = await resolveTaskId(rootDir, options.task);
+  const paths = await getArtifactPaths(rootDir);
+  const relativePath = joinRelative(paths.evidenceDir, `${taskId}.md`);
+  const evidencePath = join(rootDir, relativePath);
+
+  let existingContent: string;
+  try {
+    existingContent = await readFile(evidencePath, 'utf8');
+  } catch (error) {
+    if (isNodeError(error) && error.code === 'ENOENT') {
+      throw new KernelArtifactError(`Evidence ledger not found at ${relativePath}. Run kernel evidence new first.`);
+    }
+    throw error;
+  }
+
+  const updatedContent = appendEvidenceCommandRow(existingContent, {
+    command: options.command,
+    exitCode: options.exitCode ?? '',
+    result: options.result ?? '',
+    notes: options.notes ?? ''
+  });
+  const file = await writeArtifact(rootDir, relativePath, updatedContent, {
+    dryRun: options.dryRun,
+    force: true
+  });
+
+  return {
+    taskId,
+    files: [file]
+  };
+}
+
+export async function showTaskContract(
+  rootDir: string = process.cwd(),
+  options: ShowTaskContractOptions = {}
+): Promise<TaskContractView> {
+  const paths = await getArtifactPaths(rootDir);
+  const relativePath =
+    options.id === undefined
+      ? joinRelative(paths.stateDir, 'current-task.md')
+      : joinRelative(paths.contractsDir, `${normalizeTaskId(options.id)}.md`);
+  const content = await readFile(join(rootDir, relativePath), 'utf8');
+  const parsed = parseTaskContractContent(content);
+
+  return {
+    id: parsed.id,
+    type: parsed.type,
+    goal: parsed.goal,
+    relativePath,
+    content
   };
 }
 
@@ -327,4 +406,54 @@ function joinRelative(...parts: string[]): string {
     .flatMap((part) => part.split(/[\\/]+/))
     .filter(Boolean)
     .join('/');
+}
+
+function isNodeError(error: unknown): error is NodeJS.ErrnoException {
+  return error instanceof Error && 'code' in error;
+}
+
+function parseTaskContractContent(content: string): { id: string; type: string; goal: string } {
+  const idMatch = /^# Task Contract:\s*(.+?)\s*$/m.exec(content);
+  const typeMatch = /^Type:\s*(.+?)\s*$/m.exec(content);
+  const goalMatch = /^Goal:\s*(.+?)\s*$/m.exec(content);
+
+  if (!idMatch?.[1] || !typeMatch?.[1] || !goalMatch?.[1]) {
+    throw new KernelArtifactError('Task contract is missing required fields (id, type, or goal).');
+  }
+
+  return {
+    id: idMatch[1].trim(),
+    type: typeMatch[1].trim(),
+    goal: goalMatch[1].trim()
+  };
+}
+
+function appendEvidenceCommandRow(
+  content: string,
+  row: { command: string; exitCode: string; result: string; notes: string }
+): string {
+  const marker = '## Commands run';
+  const markerIndex = content.indexOf(marker);
+  if (markerIndex === -1) {
+    throw new KernelArtifactError('Evidence ledger is missing the Commands run section.');
+  }
+
+  const tableHeader = '| Command | Exit code | Result | Notes |';
+  const tableHeaderIndex = content.indexOf(tableHeader, markerIndex);
+  if (tableHeaderIndex === -1) {
+    throw new KernelArtifactError('Evidence ledger is missing the commands table header.');
+  }
+
+  const separatorIndex = content.indexOf('|---|---:|---|---|', tableHeaderIndex);
+  if (separatorIndex === -1) {
+    throw new KernelArtifactError('Evidence ledger is missing the commands table separator.');
+  }
+
+  const rowLine = `| ${escapeTableCell(row.command)} | ${escapeTableCell(row.exitCode)} | ${escapeTableCell(row.result)} | ${escapeTableCell(row.notes)} |`;
+  const insertIndex = content.indexOf('\n', separatorIndex) + 1;
+  return `${content.slice(0, insertIndex)}${rowLine}\n${content.slice(insertIndex)}`;
+}
+
+function escapeTableCell(value: string): string {
+  return value.replace(/\|/g, '\\|');
 }
