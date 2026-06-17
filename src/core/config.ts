@@ -30,13 +30,26 @@ const defaultConfigValues = {
     claude: true,
     cursor: true,
     kiro: true,
-    github_copilot: true
+    github_copilot: true,
+    gemini: false,
+    zed: false,
+    opencode: false,
+    windsurf: false,
+    junie: false
   },
   skills: {
     generated_set: 'mvp'
   },
   eval: {
     default_runner: 'static'
+  },
+  commands: {},
+  risk: {
+    high_risk_paths: [],
+    destructive_commands: []
+  },
+  maps: {
+    include_codeowners: true
   }
 } as const;
 
@@ -71,7 +84,12 @@ export const kernelConfigSchema = z
         claude: z.boolean().default(defaultConfigValues.adapters.claude),
         cursor: z.boolean().default(defaultConfigValues.adapters.cursor),
         kiro: z.boolean().default(defaultConfigValues.adapters.kiro),
-        github_copilot: z.boolean().default(defaultConfigValues.adapters.github_copilot)
+        github_copilot: z.boolean().default(defaultConfigValues.adapters.github_copilot),
+        gemini: z.boolean().default(defaultConfigValues.adapters.gemini),
+        zed: z.boolean().default(defaultConfigValues.adapters.zed),
+        opencode: z.boolean().default(defaultConfigValues.adapters.opencode),
+        windsurf: z.boolean().default(defaultConfigValues.adapters.windsurf),
+        junie: z.boolean().default(defaultConfigValues.adapters.junie)
       })
       .default(defaultConfigValues.adapters),
     skills: z
@@ -83,7 +101,22 @@ export const kernelConfigSchema = z
       .object({
         default_runner: z.literal(defaultConfigValues.eval.default_runner).default(defaultConfigValues.eval.default_runner)
       })
-      .default(defaultConfigValues.eval)
+      .default(defaultConfigValues.eval),
+    commands: z.record(z.string(), z.string()).default(defaultConfigValues.commands),
+    risk: z
+      .object({
+        high_risk_paths: z.array(z.string()).default([...defaultConfigValues.risk.high_risk_paths]),
+        destructive_commands: z.array(z.string()).default([...defaultConfigValues.risk.destructive_commands])
+      })
+      .default({
+        high_risk_paths: [...defaultConfigValues.risk.high_risk_paths],
+        destructive_commands: [...defaultConfigValues.risk.destructive_commands]
+      }),
+    maps: z
+      .object({
+        include_codeowners: z.boolean().default(defaultConfigValues.maps.include_codeowners)
+      })
+      .default(defaultConfigValues.maps)
   })
   .strict();
 

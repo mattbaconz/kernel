@@ -1,0 +1,11 @@
+version: 1
+commands:
+  - class: block
+    match: npm publish
+paths: []
+escalation:
+  by_task_type: {}
+  by_path: []
+ci:
+  provider: github-actions
+  required_checks: []

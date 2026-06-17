@@ -2,6 +2,7 @@ import { access, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
 import { getAdapter } from '../adapters/index.js';
+import { loadCanonicalSkills } from '../adapters/canonical-skills.js';
 import type { KernelAdapter } from '../adapters/types.js';
 import { renderGeneratedAdapterFile } from './adapter-compiler.js';
 import { KernelConfigError, loadKernelConfig, type KernelConfig } from './config.js';
@@ -9,6 +10,8 @@ import { INIT_DIRECTORIES } from './init.js';
 import { formatKernelJsonResult } from './json-output.js';
 import { GENERATED_FILE_HEADER } from './manual-sections.js';
 import { lintKernelSkills, type SkillLintIssueCode } from './skills.js';
+import { checkPolicy } from './policy/check.js';
+import { hasPolicyFiles } from './policy/loader.js';
 
 export type ValidationSeverity = 'error' | 'warning';
 export type ValidationStatus = 'pass' | 'warn' | 'fail';
@@ -23,10 +26,16 @@ export interface ValidationIssue {
     | 'invalid_config'
     | 'missing_required_directory'
     | 'missing_map_file'
+    | 'stale_map_version'
     | 'missing_generated_header'
     | 'missing_evidence_for_current_task'
     | 'missing_adapter_output'
     | 'stale_generated_file'
+    | 'missing_policy_file'
+    | 'policy_command_blocked'
+    | 'policy_path_review_required'
+    | 'insufficient_verification_level'
+    | 'missing_ci_check'
     | SkillLintIssueCode;
   severity: ValidationSeverity;
   path: string;
@@ -42,7 +51,18 @@ export interface ValidationResult {
 }
 
 const REQUIRED_MAP_FILES = ['repo.json', 'commands.json', 'tests.json', 'risk.json'] as const;
-const ADAPTER_TARGETS = ['codex', 'claude', 'cursor', 'kiro', 'github-copilot'] as const;
+const ADAPTER_TARGETS = [
+  'codex',
+  'claude',
+  'cursor',
+  'kiro',
+  'github-copilot',
+  'gemini',
+  'zed',
+  'opencode',
+  'windsurf',
+  'junie'
+] as const;
 
 export async function validateKernel(
   rootDir: string = process.cwd(),
@@ -77,9 +97,11 @@ export async function validateKernel(
 
   issues.push(...(await validateRequiredDirectories(rootDir)));
   issues.push(...(await validateMapSet(rootDir)));
+  issues.push(...(await validateMapVersions(rootDir, config)));
   issues.push(...(await validateAdapterOutputs(rootDir, config, getEnabledAdapters(config))));
   issues.push(...(await validateSkills(rootDir, config)));
   issues.push(...(await validateCurrentTaskEvidence(rootDir)));
+  issues.push(...(await validatePolicies(rootDir, strict)));
 
   return buildValidationResult(issues, strict);
 }
@@ -124,6 +146,48 @@ async function validateRequiredDirectories(rootDir: string): Promise<ValidationI
   return issues;
 }
 
+async function validateMapVersions(rootDir: string, config: KernelConfig): Promise<ValidationIssue[]> {
+  const issues: ValidationIssue[] = [];
+  const mapsDir = join(rootDir, config.canonical.maps_dir);
+
+  for (const file of REQUIRED_MAP_FILES) {
+    const mapPath = join(mapsDir, file);
+    if (!(await pathExists(mapPath))) {
+      continue;
+    }
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(await readFile(mapPath, 'utf8'));
+    } catch {
+      continue;
+    }
+
+    if (
+      typeof parsed === 'object' &&
+      parsed !== null &&
+      'version' in parsed &&
+      (parsed as { version: unknown }).version === 1
+    ) {
+      issues.push({
+        code: 'stale_map_version',
+        severity: 'warning',
+        path: joinRelative(config.canonical.maps_dir, file),
+        message: `Map file is version 1; regenerate with \`kernel map --force\` to upgrade to version 2.`
+      });
+    }
+  }
+
+  return issues;
+}
+
+function joinRelative(...parts: string[]): string {
+  return parts
+    .flatMap((part) => part.split(/[\\/]+/))
+    .filter(Boolean)
+    .join('/');
+}
+
 async function validateMapSet(rootDir: string): Promise<ValidationIssue[]> {
   const existing = new Set<string>();
 
@@ -152,9 +216,10 @@ async function validateAdapterOutputs(
   adapters: KernelAdapter[]
 ): Promise<ValidationIssue[]> {
   const issues: ValidationIssue[] = [];
+  const canonicalSkills = await loadCanonicalSkills(rootDir, config);
 
   for (const adapter of adapters) {
-    const outputs = adapter.render({ config });
+    const outputs = adapter.render({ config, canonicalSkills });
     for (const output of outputs) {
       const absolutePath = join(rootDir, output.path);
       if (!(await pathExists(absolutePath))) {
@@ -201,8 +266,85 @@ function getEnabledAdapters(config: KernelConfig): KernelAdapter[] {
       return config.adapters.github_copilot;
     }
 
-    return config.adapters[target];
+    return config.adapters[target as keyof typeof config.adapters];
   }).map((target) => getAdapter(target));
+}
+
+async function validatePolicies(rootDir: string, strict: boolean): Promise<ValidationIssue[]> {
+  const issues: ValidationIssue[] = [];
+
+  if (!(await hasPolicyFiles(rootDir))) {
+    issues.push({
+      code: 'missing_policy_file',
+      severity: 'warning',
+      path: '.agent/policies/policy-gate.yaml',
+      message: 'No policy files found in .agent/policies/.'
+    });
+  }
+
+  const hasCurrentTask = await pathExists(join(rootDir, '.agent', 'state', 'current-task.md'));
+  const policyResult = await checkPolicy({
+    rootDir,
+    strict,
+    ci: true,
+    task: hasCurrentTask ? 'current' : undefined
+  });
+
+  for (const violation of policyResult.violations) {
+    if (violation.code === 'missing_policy_file') {
+      continue;
+    }
+
+    const code = mapPolicyViolationCode(violation.code);
+    if (!code) {
+      continue;
+    }
+
+    issues.push({
+      code,
+      severity: getPolicyIssueSeverity(violation, strict),
+      path: violation.path,
+      message: violation.message
+    });
+  }
+
+  return issues;
+}
+
+function mapPolicyViolationCode(
+  code: string
+):
+  | 'policy_command_blocked'
+  | 'policy_path_review_required'
+  | 'insufficient_verification_level'
+  | 'missing_ci_check'
+  | null {
+  if (code === 'policy_command_blocked') {
+    return 'policy_command_blocked';
+  }
+  if (code === 'policy_path_review' || code === 'policy_path_block') {
+    return 'policy_path_review_required';
+  }
+  if (code === 'insufficient_verification_level') {
+    return 'insufficient_verification_level';
+  }
+  if (code === 'missing_ci_check') {
+    return 'missing_ci_check';
+  }
+  return null;
+}
+
+function getPolicyIssueSeverity(
+  violation: { code: string; severity: 'error' | 'warning'; policyClass: string },
+  strict: boolean
+): ValidationSeverity {
+  if (violation.code === 'policy_command_blocked' || violation.code === 'policy_path_block') {
+    return strict ? 'error' : 'warning';
+  }
+  if (violation.code === 'policy_command_review' && violation.policyClass === 'block') {
+    return strict ? 'error' : 'warning';
+  }
+  return 'warning';
 }
 
 async function validateCurrentTaskEvidence(rootDir: string): Promise<ValidationIssue[]> {

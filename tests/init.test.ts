@@ -43,8 +43,12 @@ describe('initializeKernel', () => {
       '.agent/adapters',
       '.agent/evals'
     ]);
-    expect(result.files.map((entry) => entry.relativePath)).toEqual(['.agent/kernel.yaml', 'AGENTS.md']);
-    expect(result.files.map((entry) => entry.action)).toEqual(['created', 'created']);
+    expect(result.files.map((entry) => entry.relativePath)).toEqual([
+      '.agent/kernel.yaml',
+      '.agent/policies/policy-gate.yaml',
+      'AGENTS.md'
+    ]);
+    expect(result.files.map((entry) => entry.action)).toEqual(['created', 'created', 'created']);
 
     await expect(readText(join(rootDir, '.agent', 'kernel.yaml'))).resolves.toContain('overwrite: false');
     await expect(readText(join(rootDir, '.agent', 'kernel.yaml'))).resolves.toContain('github_copilot: true');
@@ -58,7 +62,7 @@ describe('initializeKernel', () => {
     const result = await initializeKernel(rootDir, { dryRun: true });
 
     expect(result.directories.every((entry) => entry.action === 'would-create')).toBe(true);
-    expect(result.files.map((entry) => entry.action)).toEqual(['would-create', 'would-create']);
+    expect(result.files.map((entry) => entry.action)).toEqual(['would-create', 'would-create', 'would-create']);
     await expect(readText(join(rootDir, '.agent', 'kernel.yaml'))).rejects.toThrow();
     await expect(readText(join(rootDir, 'AGENTS.md'))).rejects.toThrow();
   });
@@ -97,5 +101,25 @@ describe('initializeKernel', () => {
     await expect(initializeKernel(rootDir)).rejects.toBeInstanceOf(KernelFileExistsError);
 
     await expect(readText(join(rootDir, 'AGENTS.md'))).rejects.toThrow();
+  });
+
+  test('seeds adapter flags when --adapters is provided', async () => {
+    const rootDir = await copyFixture('init-empty');
+
+    await initializeKernel(rootDir, { adapters: 'codex,gemini' });
+
+    const config = await readText(join(rootDir, '.agent', 'kernel.yaml'));
+    expect(config).toContain('codex: true');
+    expect(config).toContain('gemini: true');
+    expect(config).toContain('claude: false');
+    expect(config).toContain('github_copilot: false');
+  });
+
+  test('rejects unknown adapter targets during init', async () => {
+    const rootDir = await copyFixture('init-empty');
+
+    await expect(initializeKernel(rootDir, { adapters: 'codex,unknown-ade' })).rejects.toThrow(
+      'Unknown adapter target(s): unknown-ade'
+    );
   });
 });

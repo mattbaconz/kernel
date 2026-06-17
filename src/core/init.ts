@@ -3,14 +3,24 @@ import { join } from 'node:path';
 
 import { stringify as stringifyYaml } from 'yaml';
 
-import { DEFAULT_KERNEL_CONFIG } from './config.js';
+import { adapterTargetToConfigKey, type AdapterTarget, KernelAdapterTargetError, parseAdapterTargetList } from '../adapters/index.js';
+import { DEFAULT_KERNEL_CONFIG, type KernelConfig, kernelConfigSchema } from './config.js';
 import { KernelFileExistsError, type KernelWriteAction, writeKernelFile } from './fs.js';
+import { renderDefaultPolicyGate } from './policy/defaults.js';
 
 export type InitDirectoryAction = 'created' | 'exists' | 'would-create' | 'would-exist';
 
 export interface InitializeKernelOptions {
   dryRun?: boolean;
   force?: boolean;
+  adapters?: string;
+}
+
+export class KernelInitError extends Error {
+  constructor(message: string, options?: ErrorOptions) {
+    super(message, options);
+    this.name = 'KernelInitError';
+  }
 }
 
 export interface InitDirectoryResult {
@@ -54,7 +64,19 @@ export async function initializeKernel(
   rootDir: string = process.cwd(),
   options: InitializeKernelOptions = {}
 ): Promise<InitializeKernelResult> {
-  const filePlans = getInitFilePlans();
+  let enabledAdapters: AdapterTarget[] | undefined;
+  if (options.adapters !== undefined) {
+    try {
+      enabledAdapters = parseAdapterTargetList(options.adapters);
+    } catch (error) {
+      if (error instanceof KernelAdapterTargetError) {
+        throw new KernelInitError(error.message, { cause: error });
+      }
+      throw error;
+    }
+  }
+
+  const filePlans = getInitFilePlans(enabledAdapters);
 
   if (!options.force && !options.dryRun) {
     await assertNoExistingFiles(rootDir, filePlans);
@@ -82,8 +104,27 @@ export async function initializeKernel(
   return { directories, files };
 }
 
-export function renderDefaultKernelConfig(): string {
-  return stringifyYaml(DEFAULT_KERNEL_CONFIG);
+export function renderDefaultKernelConfig(enabledAdapters?: AdapterTarget[]): string {
+  return stringifyYaml(buildInitKernelConfig(enabledAdapters));
+}
+
+export function buildInitKernelConfig(enabledAdapters?: AdapterTarget[]): KernelConfig {
+  if (enabledAdapters === undefined) {
+    return DEFAULT_KERNEL_CONFIG;
+  }
+
+  const adapters = Object.fromEntries(
+    Object.keys(DEFAULT_KERNEL_CONFIG.adapters).map((key) => [key, false])
+  ) as KernelConfig['adapters'];
+
+  for (const target of enabledAdapters) {
+    adapters[adapterTargetToConfigKey(target)] = true;
+  }
+
+  return kernelConfigSchema.parse({
+    ...DEFAULT_KERNEL_CONFIG,
+    adapters
+  });
 }
 
 export function renderDefaultAgentsMd(): string {
@@ -112,11 +153,17 @@ export function renderDefaultAgentsMd(): string {
   ].join('\n');
 }
 
-function getInitFilePlans(): InitFilePlan[] {
+function getInitFilePlans(enabledAdapters?: AdapterTarget[]): InitFilePlan[] {
   return [
     {
       relativePath: '.agent/kernel.yaml',
-      content: renderDefaultKernelConfig(),
+      content: renderDefaultKernelConfig(enabledAdapters),
+      generatedHeader: false,
+      preserveManualSections: false
+    },
+    {
+      relativePath: '.agent/policies/policy-gate.yaml',
+      content: renderDefaultPolicyGate(buildInitKernelConfig(enabledAdapters)),
       generatedHeader: false,
       preserveManualSections: false
     },

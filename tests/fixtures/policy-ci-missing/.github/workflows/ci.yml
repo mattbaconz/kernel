@@ -1,0 +1,12 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - run: pnpm test

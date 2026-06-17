@@ -1,3 +1,16 @@
 {
-  "version": 1
+  "version": 2,
+  "files": [],
+  "directories": [],
+  "ignoredDirectories": [],
+  "summary": {
+    "fileCount": 0,
+    "directoryCount": 0
+  },
+  "monorepo": {
+    "tool": null,
+    "workspaceFile": null
+  },
+  "packages": [],
+  "entrypoints": []
 }

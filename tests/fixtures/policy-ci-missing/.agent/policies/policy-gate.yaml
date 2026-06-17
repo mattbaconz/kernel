@@ -1,0 +1,11 @@
+version: 1
+commands: []
+paths: []
+escalation:
+  by_task_type: {}
+  by_path: []
+ci:
+  provider: github-actions
+  required_checks:
+    - pnpm test
+    - pnpm lint

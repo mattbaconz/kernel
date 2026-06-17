@@ -46,13 +46,26 @@ describe('loadKernelConfig', () => {
         claude: true,
         cursor: true,
         kiro: true,
-        github_copilot: true
+        github_copilot: true,
+        gemini: false,
+        zed: false,
+        opencode: false,
+        windsurf: false,
+        junie: false
       },
       skills: {
         generated_set: 'mvp'
       },
       eval: {
         default_runner: 'static'
+      },
+      commands: {},
+      risk: {
+        high_risk_paths: [],
+        destructive_commands: []
+      },
+      maps: {
+        include_codeowners: true
       }
     });
   });
@@ -148,5 +161,34 @@ describe('loadKernelConfig', () => {
     );
 
     await expect(loadKernelConfig(rootDir)).rejects.toBeInstanceOf(KernelConfigError);
+  });
+
+  test('loads optional commands and risk blocks', async () => {
+    const rootDir = await createTempRepo();
+    await mkdir(join(rootDir, '.agent'), { recursive: true });
+    await writeFile(
+      join(rootDir, '.agent', 'kernel.yaml'),
+      [
+        'version: 1',
+        'commands:',
+        '  test: pnpm test',
+        'risk:',
+        '  high_risk_paths:',
+        '    - src/core/**',
+        '  destructive_commands:',
+        '    - npm publish',
+        'maps:',
+        '  include_codeowners: false',
+        ''
+      ].join('\n'),
+      'utf8'
+    );
+
+    const config = await loadKernelConfig(rootDir);
+
+    expect(config.commands).toEqual({ test: 'pnpm test' });
+    expect(config.risk.high_risk_paths).toEqual(['src/core/**']);
+    expect(config.risk.destructive_commands).toEqual(['npm publish']);
+    expect(config.maps.include_codeowners).toBe(false);
   });
 });

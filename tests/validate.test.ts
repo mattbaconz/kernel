@@ -55,6 +55,7 @@ describe('validateKernel', () => {
 
     expect(result.status).toBe('fail');
     expect(result.issues.map((issue) => `${issue.code}:${issue.path}`)).toEqual([
+      'missing_policy_file:.agent/policies/policy-gate.yaml',
       'missing_required_directory:.agent/adapters',
       'missing_required_directory:.agent/contracts',
       'missing_required_directory:.agent/evals',
@@ -65,6 +66,25 @@ describe('validateKernel', () => {
       'missing_required_directory:.agent/skills',
       'missing_required_directory:.agent/state'
     ]);
+  });
+
+  test('reports stale v1 map files as warnings', async () => {
+    const rootDir = await copyFixture('validate-valid');
+    await writeFile(
+      join(rootDir, '.agent', 'maps', 'repo.json'),
+      `${JSON.stringify({ version: 1 }, null, 2)}\n`,
+      'utf8'
+    );
+
+    const result = await validateKernel(rootDir);
+
+    expect(result.status).toBe('warn');
+    expect(result.issues).toContainEqual({
+      code: 'stale_map_version',
+      severity: 'warning',
+      path: '.agent/maps/repo.json',
+      message: 'Map file is version 1; regenerate with `kernel map --force` to upgrade to version 2.'
+    });
   });
 
   test('reports deterministic warnings for incomplete generated artifacts', async () => {

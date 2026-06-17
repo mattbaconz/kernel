@@ -1,0 +1,12 @@
+version: 1
+commands: []
+paths:
+  - pattern: src/auth/**
+    class: review
+    reason: authentication
+escalation:
+  by_task_type: {}
+  by_path: []
+ci:
+  provider: github-actions
+  required_checks: []

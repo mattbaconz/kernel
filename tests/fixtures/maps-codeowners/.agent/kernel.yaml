@@ -1,0 +1,8 @@
+version: 1
+project:
+  name: maps-codeowners-fixture
+risk:
+  high_risk_paths:
+    - src/auth/**
+  destructive_commands:
+    - rm -rf

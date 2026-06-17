@@ -3,15 +3,31 @@ import { canonicalSourceList, kernelProcedure, manualSection, primeDirective, sk
 
 export const claudeAdapter: KernelAdapter = {
   name: 'claude',
-  render({ config }) {
+  render({ config, canonicalSkills }) {
     const projectName = config.project.name;
-    return [
+    const outputs = [
       {
         path: 'CLAUDE.md',
         content: renderClaudeMd(projectName),
-        generated: true,
+        generated: true as const,
         preserveManualSections: true
-      },
+      }
+    ];
+
+    if (canonicalSkills.length > 0) {
+      for (const skill of canonicalSkills) {
+        outputs.push({
+          path: `.claude/skills/${skill.name}/SKILL.md`,
+          content: skill.content,
+          generated: true as const,
+          preserveManualSections: true
+        });
+      }
+      return outputs;
+    }
+
+    return [
+      ...outputs,
       {
         path: '.claude/skills/kernel-core/SKILL.md',
         content: renderClaudeSkill(
@@ -20,7 +36,7 @@ export const claudeAdapter: KernelAdapter = {
           projectName,
           'Follow Kernel task contracts, verification evidence, and handoff rules.'
         ),
-        generated: true,
+        generated: true as const,
         preserveManualSections: true
       },
       {
@@ -31,7 +47,7 @@ export const claudeAdapter: KernelAdapter = {
           projectName,
           'Review risk zones, evidence, generated files, and missing validation before approval.'
         ),
-        generated: true,
+        generated: true as const,
         preserveManualSections: true
       },
       {
@@ -42,7 +58,7 @@ export const claudeAdapter: KernelAdapter = {
           projectName,
           'Capture reproduction steps, failing checks, and green verification in Kernel evidence.'
         ),
-        generated: true,
+        generated: true as const,
         preserveManualSections: true
       },
       {
@@ -53,7 +69,7 @@ export const claudeAdapter: KernelAdapter = {
           projectName,
           'Write a concise handoff packet under `.agent/handoffs/` before context is lost.'
         ),
-        generated: true,
+        generated: true as const,
         preserveManualSections: true
       }
     ];

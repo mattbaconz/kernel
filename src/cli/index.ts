@@ -6,7 +6,7 @@ import { Command } from 'commander';
 
 import { getAdaptersForTarget } from '../adapters/index.js';
 import { compileAdapters } from '../core/adapter-compiler.js';
-import { createEvidenceLedger, createHandoffPacket, createTaskContract } from '../core/artifacts.js';
+import { createEvidenceLedger, createHandoffPacket, createTaskContract, addEvidenceCommand, showTaskContract } from '../core/artifacts.js';
 import {
   formatSkillEvalJsonResult,
   formatSkillEvalResult,
@@ -31,6 +31,11 @@ import {
 import { generateCanonicalSkills, type GenerateCanonicalSkillsResult } from '../core/skill-generator.js';
 import { formatSkillLintJsonResult, formatSkillLintResult, lintKernelSkills } from '../core/skills.js';
 import { formatValidationJsonResult, formatValidationResult, validateKernel } from '../core/validate.js';
+import {
+  checkPolicy,
+  formatPolicyCheckJsonResult,
+  formatPolicyCheckResult
+} from '../core/policy/check.js';
 import { createCliJsonErrorEnvelope, formatCliJsonErrorEnvelope } from './json-errors.js';
 
 export function createKernelProgram(): Command {
@@ -46,12 +51,24 @@ export function createKernelProgram(): Command {
     .description('Initialize Kernel in the current repository.')
     .option('--force', 'allow overwriting generated files')
     .option('--dry-run', 'show planned writes without changing files')
-    .action(async (options: { force?: boolean; dryRun?: boolean }) => {
-      const result = await initializeKernel(process.cwd(), {
-        force: Boolean(options.force),
-        dryRun: Boolean(options.dryRun)
-      });
-      console.log(formatInitResult(result));
+    .option('--adapters <list>', 'comma-separated adapter targets to enable in kernel.yaml')
+    .action(async (options: { force?: boolean; dryRun?: boolean; adapters?: string }) => {
+      try {
+        const result = await initializeKernel(process.cwd(), {
+          force: Boolean(options.force),
+          dryRun: Boolean(options.dryRun),
+          adapters: options.adapters
+        });
+        console.log(formatInitResult(result));
+      } catch (error) {
+        if (error instanceof Error && error.name === 'KernelInitError') {
+          console.error(error.message);
+          process.exitCode = 1;
+          return;
+        }
+
+        throw error;
+      }
     });
 
   program
@@ -60,11 +77,26 @@ export function createKernelProgram(): Command {
     .option('--force', 'allow overwriting map files')
     .option('--dry-run', 'show planned writes without changing files')
     .option('--include-docs-vault', 'include kernel_obsidian_vault in the scan')
-    .action(async (options: { force?: boolean; dryRun?: boolean; includeDocsVault?: boolean }) => {
+    .option('--commands', 'generate only commands.json')
+    .option('--tests', 'generate only tests.json')
+    .option('--risk', 'generate only risk.json')
+    .action(async (options: { force?: boolean; dryRun?: boolean; includeDocsVault?: boolean; commands?: boolean; tests?: boolean; risk?: boolean }) => {
+      const maps: ('commands' | 'tests' | 'risk')[] = [];
+      if (options.commands) {
+        maps.push('commands');
+      }
+      if (options.tests) {
+        maps.push('tests');
+      }
+      if (options.risk) {
+        maps.push('risk');
+      }
+
       const result = await generateKernelMaps(process.cwd(), {
         force: Boolean(options.force),
         dryRun: Boolean(options.dryRun),
-        includeDocsVault: Boolean(options.includeDocsVault)
+        includeDocsVault: Boolean(options.includeDocsVault),
+        maps: maps.length > 0 ? maps : undefined
       });
       console.log(formatArtifactResult(result.files));
     });
@@ -91,6 +123,51 @@ export function createKernelProgram(): Command {
         }
       } catch (error) {
         if (writeJsonErrorEnvelope('validate', Boolean(options.json), error)) {
+          return;
+        }
+
+        throw error;
+      }
+    });
+
+  const policy = program.command('policy').description('Evaluate Kernel policy rules.');
+  policy
+    .command('check')
+    .description('Check commands, paths, task escalation, and CI policy compliance.')
+    .option('--command <command>', 'classify a single command string')
+    .option('--path <path>', 'classify a single repository path')
+    .option('--task <task>', 'check verification escalation for a task (use current)')
+    .option('--ci', 'check CI workflow compliance')
+    .option('--strict', 'treat warnings as errors')
+    .option('--json', 'print machine-readable JSON')
+    .action(async (options: {
+      command?: string;
+      path?: string;
+      task?: string;
+      ci?: boolean;
+      strict?: boolean;
+      json?: boolean;
+    }) => {
+      try {
+        const result = await checkPolicy({
+          command: options.command,
+          path: options.path,
+          task: options.task,
+          ci: Boolean(options.ci),
+          strict: Boolean(options.strict)
+        });
+
+        if (options.json) {
+          process.stdout.write(formatPolicyCheckJsonResult(result));
+        } else {
+          process.stdout.write(`${formatPolicyCheckResult(result)}\n`);
+        }
+
+        if (result.status === 'fail') {
+          process.exitCode = 1;
+        }
+      } catch (error) {
+        if (writeJsonErrorEnvelope('policy check', Boolean(options.json), error)) {
           return;
         }
 
@@ -149,6 +226,35 @@ export function createKernelProgram(): Command {
       }
     );
 
+  task
+    .command('show')
+    .description('Show the current task contract or a task contract by id.')
+    .option('--id <id>', 'task id')
+    .option('--json', 'print machine-readable JSON')
+    .action(async (options: { id?: string; json?: boolean }) => {
+      try {
+        const result = await showTaskContract(process.cwd(), { id: options.id });
+        if (options.json) {
+          process.stdout.write(formatKernelJsonResult(result));
+          return;
+        }
+
+        console.log(formatTaskContractView(result));
+      } catch (error) {
+        if (writeJsonErrorEnvelope('task show', Boolean(options.json), error)) {
+          return;
+        }
+
+        if (error instanceof Error) {
+          console.error(error.message);
+          process.exitCode = 1;
+          return;
+        }
+
+        throw error;
+      }
+    });
+
   const evidence = program.command('evidence').description('Create and update Kernel evidence ledgers.');
   evidence
     .command('new')
@@ -166,6 +272,42 @@ export function createKernelProgram(): Command {
       });
       console.log(formatArtifactResult(result.files));
     });
+
+  evidence
+    .command('add-command')
+    .description('Append a verification command to an evidence ledger.')
+    .argument('<command>', 'verification command')
+    .option('--task <task>', 'task id or current', 'current')
+    .option('--exit-code <code>', 'command exit code')
+    .option('--result <result>', 'command result summary')
+    .option('--notes <notes>', 'additional notes')
+    .option('--dry-run', 'show planned writes without changing files')
+    .action(
+      async (
+        command: string,
+        options: { task: string; exitCode?: string; result?: string; notes?: string; dryRun?: boolean }
+      ) => {
+        try {
+          const result = await addEvidenceCommand(process.cwd(), {
+            task: options.task,
+            command,
+            exitCode: options.exitCode,
+            result: options.result,
+            notes: options.notes,
+            dryRun: Boolean(options.dryRun)
+          });
+          console.log(formatArtifactResult(result.files));
+        } catch (error) {
+          if (error instanceof Error) {
+            console.error(error.message);
+            process.exitCode = 1;
+            return;
+          }
+
+          throw error;
+        }
+      }
+    );
 
   const handoff = program.command('handoff').description('Create Kernel handoff packets.');
   handoff
@@ -397,6 +539,15 @@ function formatInitResult(result: InitializeKernelResult): string {
 
 function formatArtifactResult(files: { action: string; relativePath: string }[]): string {
   return files.map((entry) => `${entry.action}: ${entry.relativePath}`).join('\n');
+}
+
+function formatTaskContractView(view: {
+  id: string;
+  type: string;
+  goal: string;
+  relativePath: string;
+}): string {
+  return [`Task: ${view.id}`, `Type: ${view.type}`, `Goal: ${view.goal}`, `Path: ${view.relativePath}`].join('\n');
 }
 
 export function formatSkillGenerateResult(result: GenerateCanonicalSkillsResult): string {

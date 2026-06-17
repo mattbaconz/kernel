@@ -1,0 +1,10 @@
+version: 1
+commands: []
+paths: []
+escalation:
+  by_task_type:
+    migration: L5
+  by_path: []
+ci:
+  provider: github-actions
+  required_checks: []
