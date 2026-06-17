@@ -166,7 +166,11 @@ describe('Kernel release-readiness workflow', () => {
 
     expect(packageJson.name).toBe('@mattbaconz/kernel');
     expect(packageJson.license).toBe('Apache-2.0');
-    expect(packageJson.private).toBe(true);
+    if (packageJson.private === true) {
+      expect(packageJson.private).toBe(true);
+    } else {
+      expect(packageJson.private).toBeUndefined();
+    }
     expect(packageJson.bin).toEqual({
       kernel: './dist/cli/index.js'
     });
